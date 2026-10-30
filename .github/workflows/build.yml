@@ -10,6 +10,10 @@ jobs:
   device:
     runs-on: xcode-27
     timeout-minutes: 180
+    env:
+      NOVEO_RCLONE_CONFIG: ${{ secrets.NOVEO_RCLONE_CONFIG }}
+      RCLONE_CONFIG: ${{ runner.temp }}/noveo-rclone.conf
+      DRIVE_CACHE: noveocache:noveo-build-cache/ios-device-arm64
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,7 +24,26 @@ jobs:
           test -d "/Applications/Xcode_${XCODE_VERSION}.app"
           sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
           xcodebuild -version
+      - name: Set up Google Drive cache
+        if: env.NOVEO_RCLONE_CONFIG != ''
+        run: |
+          command -v rclone >/dev/null || brew install rclone
+          echo "DRIVE_CACHE=$DRIVE_CACHE/${{ hashFiles('versions.json', 'MODULE.bazel.lock', '.gitmodules') }}" >> "$GITHUB_ENV"
+          python3 - <<'PYCONFIG'
+          import os
+          from pathlib import Path
+          path = Path(os.environ['RCLONE_CONFIG'])
+          path.write_text(os.environ['NOVEO_RCLONE_CONFIG'])
+          path.chmod(0o600)
+          PYCONFIG
+      - name: Restore Google Drive cache
+        id: drive-cache
+        if: env.NOVEO_RCLONE_CONFIG != ''
+        continue-on-error: true
+        timeout-minutes: 30
+        run: python3 tools/noveo/drive_cache.py restore "$HOME/noveo-bazel-cache" "$DRIVE_CACHE"
       - uses: actions/cache/restore@v4
+        if: env.NOVEO_RCLONE_CONFIG == '' || steps.drive-cache.outputs.hit != 'true'
         id: bazel-cache
         with:
           path: ~/noveo-bazel-cache
@@ -44,7 +67,9 @@ jobs:
           Path(os.environ['RUNNER_TEMP'], 'noveo-device.json').write_text(json.dumps(config))
           PY
           mkdir -p "$HOME/noveo-bazel-cache"
-          echo 'build --experimental_disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
+          if [ -z "$NOVEO_RCLONE_CONFIG" ]; then
+            echo 'build --experimental_disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
+          fi
           echo 'build --define=apple.compress_ipa=true' >> "$HOME/.bazelrc"
           echo 'build --features=disable_legacy_signing' >> "$HOME/.bazelrc"
           echo 'build --//Telegram:disableProvisioningProfiles' >> "$HOME/.bazelrc"
@@ -65,8 +90,18 @@ jobs:
           path: build/device-test-artifacts/
           compression-level: 0
           if-no-files-found: error
+      - name: Save Google Drive cache
+        if: always() && !cancelled() && env.NOVEO_RCLONE_CONFIG != ''
+        continue-on-error: true
+        timeout-minutes: 45
+        run: |
+          BAZEL_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["bazel"].split(":")[0])')
+          if [ -x "build-input/bazel-$BAZEL_VERSION-darwin-arm64" ]; then
+            "build-input/bazel-$BAZEL_VERSION-darwin-arm64" shutdown
+          fi
+          python3 tools/noveo/drive_cache.py save "$HOME/noveo-bazel-cache" "$DRIVE_CACHE"
       - uses: actions/cache/save@v4
-        if: always() && !cancelled() && steps.bazel-cache.outputs.cache-hit != 'true'
+        if: always() && !cancelled() && env.NOVEO_RCLONE_CONFIG == '' && steps.bazel-cache.outputs.cache-hit != 'true'
         with:
           path: ~/noveo-bazel-cache
           key: ${{ steps.bazel-cache.outputs.cache-primary-key }}
@@ -76,3 +111,11 @@ jobs:
           name: noveo-device-build-log
           path: ${{ runner.temp }}/noveo-device-build.log
           if-no-files-found: ignore
+      - name: Remove temporary Drive credentials
+        if: always()
+        run: |
+          python3 - <<'PYCONFIG'
+          import os
+          from pathlib import Path
+          Path(os.environ['RCLONE_CONFIG']).unlink(missing_ok=True)
+          PYCONFIG
