@@ -1,0 +1,32 @@
+name: Noveo transport checks
+on:
+  push:
+    paths:
+      - 'submodules/NoveoTransport/**'
+      - '.github/workflows/noveo-transport.yml'
+  pull_request:
+    paths:
+      - 'submodules/NoveoTransport/**'
+      - '.github/workflows/noveo-transport.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  protocol:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Identify Swift toolchain
+        id: swift
+        run: |
+          swift --version
+          echo "version=$(swift --version | shasum -a 256 | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: submodules/NoveoTransport/.build
+          key: noveo-swift-${{ runner.os }}-${{ runner.arch }}-${{ steps.swift.outputs.version }}-${{ hashFiles('submodules/NoveoTransport/Package.swift') }}-${{ github.sha }}
+          restore-keys: |
+            noveo-swift-${{ runner.os }}-${{ runner.arch }}-${{ steps.swift.outputs.version }}-${{ hashFiles('submodules/NoveoTransport/Package.swift') }}-
+      - name: Compile transport and run protocol regressions
+        run: swift test --package-path submodules/NoveoTransport --parallel

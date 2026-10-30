@@ -3,6 +3,11 @@ name: CI
 on:
   push:
     branches: [ master ]
+    paths-ignore:
+      - 'submodules/NoveoTransport/**'
+      - 'docs/noveo/**'
+      - '.github/workflows/noveo-transport.yml'
+      - '.github/workflows/build.yml'
 
   workflow_dispatch:
 
@@ -87,7 +92,7 @@ jobs:
           prerelease: false
 
       - name: Upload Release IPA
-        id: upload-release-ipa 
+        id: upload-release-ipa
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -98,7 +103,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload Release DSYM
-        id: upload-release-dsym 
+        id: upload-release-dsym
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
