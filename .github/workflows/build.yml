@@ -17,12 +17,13 @@ jobs:
     timeout-minutes: 180
     env:
       NOVEO_RCLONE_CONFIG: ${{ secrets.NOVEO_RCLONE_CONFIG }}
-      RCLONE_CONFIG: ${{ runner.temp }}/noveo-rclone.conf
       DRIVE_CACHE: noveocache:noveo-build-cache/ios-device-arm64
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Configure temporary credential path
+        run: echo "RCLONE_CONFIG=$RUNNER_TEMP/noveo-rclone.conf" >> "$GITHUB_ENV"
       - name: Verify cold-build cache destination
         if: inputs.cold_build == true
         run: |
