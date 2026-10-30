@@ -42,7 +42,10 @@ struct NoveoPeerIdentityStore {
                           id: PeerId.Id._internalFromInt64Value(id))
         }
         let snapshot = try map.snapshot()
-        transaction.setPreferencesEntry(key: self.key, value: PreferencesEntry(NoveoPeerIdentitySnapshot(data: snapshot)))
+        guard let entry = PreferencesEntry(NoveoPeerIdentitySnapshot(data: snapshot)) else {
+            throw NoveoPeerIdentityError.corruptSnapshot
+        }
+        transaction.setPreferencesEntry(key: self.key, value: entry)
         return peers
     }
 
