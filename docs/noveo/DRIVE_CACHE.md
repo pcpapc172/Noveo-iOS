@@ -28,3 +28,5 @@ Credentials exist only in a mode-0600 temporary runner config and are removed in
 Local verification used rclone's local backend: compressed streaming upload/download round trip,
 retention of exactly two snapshots, and preservation of the existing pointer for an empty cache.
 Google authorization and a live Drive upload must still be verified before claiming Drive is active.
+
+To populate Drive from a completely cold device build, dispatch build.yml with cold_build=true. Both Drive and GitHub cache restores are skipped, a configured Drive secret is required, and the run gets its own concurrency group so it can execute beside a normal device build. Cache saving and artifact upload still run normally; existing builds are not cancelled.
