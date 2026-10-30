@@ -40,6 +40,15 @@ jobs:
             --codesigningInformationPath=build-system/fake-codesigning \
             --configuration=debug_sim_arm64 --buildNumber="${{ github.run_number }}" \
             --continueOnError 2>&1 | tee "$RUNNER_TEMP/noveo-build.log"
+      - name: Smoke-test app startup in disposable simulator
+        timeout-minutes: 10
+        run: python3 tools/noveo/simulator_smoke.py bazel-bin/Telegram/Telegram.ipa "$RUNNER_TEMP/noveo-smoke"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: noveo-simulator-startup
+          path: ${{ runner.temp }}/noveo-smoke
+          if-no-files-found: ignore
       - uses: actions/cache/save@v4
         if: always() && !cancelled() && steps.bazel-cache.outputs.cache-hit != 'true'
         with:
