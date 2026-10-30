@@ -32,7 +32,7 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p "$HOME/noveo-bazel-cache"
-          echo 'build --disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
+          echo 'build --experimental_disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
           python3 -u build-system/Make/Make.py \
             --cacheDir="$HOME/noveo-bazel-cache" \

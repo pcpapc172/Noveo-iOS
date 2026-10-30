@@ -1,6 +1,6 @@
 import Foundation
 
-public enum NoveoPeerKind: String, Codable, Sendable { case user, chat }
+public enum NoveoPeerKind: String, Codable, Hashable, Sendable { case user, chat }
 public enum NoveoPeerIdentityError: Error { case corruptSnapshot, accountMismatch, exhausted }
 
 /// Per-account UUID mapping. Persist its snapshot in the same transaction as native peers.
