@@ -1,0 +1,19 @@
+diff --git a/apple/internal/partials/provisioning_profile.bzl b/apple/internal/partials/provisioning_profile.bzl
+--- a/apple/internal/partials/provisioning_profile.bzl
++++ b/apple/internal/partials/provisioning_profile.bzl
+@@ -38,12 +38,9 @@ def _provisioning_profile_partial_impl(
+     """Implementation for the provisioning profile partial."""
+ 
+     if not profile_artifact:
+-        fail(
+-            "\n".join([
+-                "ERROR: In {}:".format(str(rule_label)),
+-                "Building for device, but no provisioning_profile attribute was set.",
+-            ]),
+-        )
++        # Applied only by Noveo's unprovisioned device-artifact CI workflow.
++        # Signing is separately disabled with the disable_legacy_signing feature.
++        return struct(bundle_files = [])
+ 
+     # Create intermediate file with proper name for the binary.
+     intermediate_file = intermediates.file(

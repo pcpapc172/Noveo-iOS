@@ -28,6 +28,10 @@ jobs:
           restore-keys: |
             noveo-ios-bazel-${{ runner.arch }}-${{ hashFiles('versions.json', 'MODULE.bazel.lock', '.gitmodules') }}-device-
             noveo-ios-bazel-${{ runner.arch }}-${{ hashFiles('versions.json', 'MODULE.bazel.lock', '.gitmodules') }}-
+      - name: Enable unprovisioned archive packaging for test workflow
+        run: |
+          git -C build-system/bazel-rules/rules_apple apply --check "$GITHUB_WORKSPACE/tools/noveo/unprovisioned-profiles.patch"
+          git -C build-system/bazel-rules/rules_apple apply "$GITHUB_WORKSPACE/tools/noveo/unprovisioned-profiles.patch"
       - name: Prepare unprovisioned device test configuration
         run: |
           python3 - <<'PY'
@@ -41,6 +45,7 @@ jobs:
           PY
           mkdir -p "$HOME/noveo-bazel-cache"
           echo 'build --experimental_disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
+          echo 'build --features=disable_legacy_signing' >> "$HOME/.bazelrc"
           echo 'build --//Telegram:disableProvisioningProfiles' >> "$HOME/.bazelrc"
       - name: Build complete arm64 device app
         run: |
