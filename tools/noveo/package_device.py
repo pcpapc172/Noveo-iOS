@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import plistlib
 import re
@@ -25,6 +26,16 @@ def validate_device(info, build_info):
         raise ValueError('Expected an arm64 device executable')
 
 
+def link_archive(source, destination):
+    """Expose both extensions without allocating another copy of the device archive."""
+    if destination.exists():
+        if destination.samefile(source):
+            return
+        raise FileExistsError("Refusing to replace unrelated artifact: " + str(destination))
+    # Fail rather than falling back to a full copy if the output is on another filesystem.
+    os.link(source.resolve(), destination)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('archive', type=Path)
@@ -44,7 +55,8 @@ def main():
         member = plists[0].rsplit('/', 1)[0] + '/' + executable
         with tempfile.TemporaryDirectory(prefix='noveo-ipa-check-') as stage:
             binary = Path(stage) / 'executable'
-            binary.write_bytes(archive.read(member))
+            with archive.open(member) as source, binary.open("wb") as target:
+                shutil.copyfileobj(source, target, length=1024 * 1024)
             build_info = subprocess.check_output(['xcrun', 'vtool', '-show-build', str(binary)], text=True)
             # vtool prints architecture on the filename line, not the load-command fields.
             architectures = subprocess.check_output(['xcrun', 'lipo', '-archs', str(binary)], text=True).split()
@@ -52,7 +64,7 @@ def main():
             validate_device(info, build_info)
     args.output.mkdir(parents=True, exist_ok=True)
     for suffix in ('ipa', 'tipa'):
-        shutil.copyfile(args.archive, args.output / ('Noveo-iOS-test.' + suffix))
+        link_archive(args.archive, args.output / ('Noveo-iOS-test.' + suffix))
     with args.archive.open('rb') as source:
         digest = hashlib.file_digest(source, 'sha256').hexdigest()
     (args.output / 'SHA256SUMS').write_text(''.join(digest + '  Noveo-iOS-test.' + s + '\n' for s in ('ipa', 'tipa')))

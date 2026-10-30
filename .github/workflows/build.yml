@@ -45,6 +45,7 @@ jobs:
           PY
           mkdir -p "$HOME/noveo-bazel-cache"
           echo 'build --experimental_disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
+          echo 'build --define=apple.compress_ipa=true' >> "$HOME/.bazelrc"
           echo 'build --features=disable_legacy_signing' >> "$HOME/.bazelrc"
           echo 'build --//Telegram:disableProvisioningProfiles' >> "$HOME/.bazelrc"
       - name: Build complete arm64 device app
@@ -57,11 +58,11 @@ jobs:
             --buildNumber="${{ github.run_number }}" \
             2>&1 | tee "$RUNNER_TEMP/noveo-device-build.log"
       - name: Validate device archive and package IPA and TIPA
-        run: python3 tools/noveo/package_device.py bazel-bin/Telegram/Telegram.ipa "$RUNNER_TEMP/noveo-device-artifacts"
+        run: python3 tools/noveo/package_device.py bazel-bin/Telegram/Telegram.ipa "$GITHUB_WORKSPACE/build/device-test-artifacts"
       - uses: actions/upload-artifact@v4
         with:
           name: Noveo-iOS-device-test-${{ github.run_number }}
-          path: ${{ runner.temp }}/noveo-device-artifacts/
+          path: build/device-test-artifacts/
           compression-level: 0
           if-no-files-found: error
       - uses: actions/cache/save@v4
