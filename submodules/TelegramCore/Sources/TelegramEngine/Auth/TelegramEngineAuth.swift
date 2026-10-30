@@ -1,3 +1,4 @@
+import NoveoTransport
 import SwiftSignalKit
 import Postbox
 internal import TelegramApi
@@ -14,6 +15,14 @@ public extension TelegramEngineUnauthorized {
 
         init(account: UnauthorizedAccount) {
             self.account = account
+        }
+
+        /// Retain one coordinator for the lifetime of this local account's Noveo login screen.
+        /// This authenticates Noveo only; Postbox authorization is committed by the account adapter.
+        @available(iOS 15.0, macOS 12.0, *)
+        public func makeNoveoAuthenticationCoordinator() -> NoveoAuthenticationCoordinator {
+            return NoveoAuthenticationCoordinator(accountSlot: "account-\(self.account.id.int64)",
+                storage: NoveoKeychainSessionStorage(), client: NoveoClient())
         }
 
         public func exportAuthTransferToken(accountManager: AccountManager<TelegramAccountManagerTypes>, otherAccountUserIds: [PeerId.Id], syncContacts: Bool) -> Signal<ExportAuthTransferTokenResult, ExportAuthTransferTokenError> {

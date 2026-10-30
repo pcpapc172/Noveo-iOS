@@ -13,6 +13,7 @@ swift_library(
     ],
     deps = [
         "//submodules/TelegramApi:TelegramApi",
+        "//submodules/NoveoTransport:NoveoTransport",
         "//submodules/MtProtoKit:MtProtoKit",
         "//submodules/MediaPreuploadRegistry:MediaPreuploadRegistry",
         "//submodules/WebProxyTransport:WebProxyTransport",

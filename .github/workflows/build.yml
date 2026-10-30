@@ -1,14 +1,6 @@
 name: CI
 
 on:
-  push:
-    branches: [ master ]
-    paths-ignore:
-      - 'submodules/NoveoTransport/**'
-      - 'docs/noveo/**'
-      - '.github/workflows/noveo-transport.yml'
-      - '.github/workflows/build.yml'
-
   workflow_dispatch:
 
 jobs:
