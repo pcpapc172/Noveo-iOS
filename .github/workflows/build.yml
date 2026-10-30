@@ -84,6 +84,8 @@ jobs:
           echo 'build --define=apple.compress_ipa=true' >> "$HOME/.bazelrc"
           echo 'build --features=disable_legacy_signing' >> "$HOME/.bazelrc"
           echo 'build --//Telegram:disableProvisioningProfiles' >> "$HOME/.bazelrc"
+          echo 'build --//Telegram:noveoUnprovisionedTestBuild' >> "$HOME/.bazelrc"
+          echo 'build --//Telegram:disableExtensions' >> "$HOME/.bazelrc"
       - name: Build complete arm64 device app
         run: |
           set -o pipefail

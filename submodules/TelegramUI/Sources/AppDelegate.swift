@@ -573,7 +573,23 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         try! PasscodeEnvironment.shared.configure(PasscodeConfiguration(appGroupIdentifier: appGroupName, processRole: .mainApp, biometricKeychainService: walletBiometricKeychainService), privateAccessGroup: {
             BuildConfig.keychainAccessGroup(baseAppBundleId: baseAppBundleId)
         })
-        let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        let maybeAppGroupUrl: URL?
+        if Bundle.main.object(forInfoDictionaryKey: "NoveoUnprovisionedTestBuild") as? Bool == true {
+            // Sideload/cloud signing may omit app groups; keep test data in this app's sandbox.
+            if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+                let isolatedContainer = support.appendingPathComponent("NoveoDeviceTest", isDirectory: true)
+                do {
+                    try FileManager.default.createDirectory(at: isolatedContainer, withIntermediateDirectories: true)
+                    maybeAppGroupUrl = isolatedContainer
+                } catch {
+                    maybeAppGroupUrl = nil
+                }
+            } else {
+                maybeAppGroupUrl = nil
+            }
+        } else {
+            maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        }
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         self.buildConfig = buildConfig

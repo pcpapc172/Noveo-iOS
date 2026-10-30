@@ -77,6 +77,24 @@ bool_flag(
     visibility = ["//visibility:public"],
 )
 
+# Device sideload test archives cannot rely on provisioning-backed shared containers.
+bool_flag(
+    name = "noveoUnprovisionedTestBuild",
+    build_setting_default = False,
+    visibility = ["//visibility:public"],
+)
+
+config_setting(
+    name = "noveoUnprovisionedTestBuildSetting",
+    flag_values = {":noveoUnprovisionedTestBuild": "True"},
+)
+
+plist_fragment(
+    name = "NoveoUnprovisionedTestInfoPlist",
+    extension = "plist",
+    template = "<key>NoveoUnprovisionedTestBuild</key><true/>",
+)
+
 bool_flag(
     name = "disableProvisioningProfiles",
     build_setting_default = False,
@@ -1921,7 +1939,10 @@ ios_application(
         ":VersionInfoPlist",
         ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
-    ],
+    ] + select({
+        ":noveoUnprovisionedTestBuildSetting": [":NoveoUnprovisionedTestInfoPlist"],
+        "//conditions:default": [],
+    }),
     app_icons = [ ":{}_icon".format(name) for name in composer_icon_folders ],
     alternate_icons = [
         ":{}".format(name) for name in alternate_icon_folders
@@ -2038,7 +2059,10 @@ ios_application(
         ":VersionInfoPlist",
         ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
-    ],
+    ] + select({
+        ":noveoUnprovisionedTestBuildSetting": [":NoveoUnprovisionedTestInfoPlist"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//third-party/webrtc",
         "//third-party/webrtc:webrtc_objc",
@@ -2063,7 +2087,10 @@ ios_application(
         ":VersionInfoPlist",
         ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
-    ],
+    ] + select({
+        ":noveoUnprovisionedTestBuildSetting": [":NoveoUnprovisionedTestInfoPlist"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//third-party/libvpx:vpx",
     ],
