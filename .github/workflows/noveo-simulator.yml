@@ -1,0 +1,59 @@
+name: Noveo full simulator build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: noveo-simulator-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  simulator:
+    runs-on: xcode-27
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Select pinned Xcode
+        run: |
+          XCODE_VERSION=$(python3 -c 'import json; print(json.load(open("versions.json"))["xcode"])')
+          test -d "/Applications/Xcode_${XCODE_VERSION}.app"
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          xcodebuild -version
+          swift --version
+      - uses: actions/cache/restore@v4
+        id: bazel-cache
+        with:
+          path: ~/noveo-bazel-cache
+          key: noveo-ios-bazel-${{ runner.arch }}-${{ hashFiles('versions.json', 'MODULE.bazel.lock', '.gitmodules') }}-${{ github.sha }}
+          restore-keys: |
+            noveo-ios-bazel-${{ runner.arch }}-${{ hashFiles('versions.json', 'MODULE.bazel.lock', '.gitmodules') }}-
+      - name: Build complete simulator app
+        run: |
+          set -o pipefail
+          mkdir -p "$HOME/noveo-bazel-cache"
+          echo 'build --disk_cache_gc_max_size=5G' >> "$HOME/.bazelrc"
+          python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+          python3 -u build-system/Make/Make.py \
+            --cacheDir="$HOME/noveo-bazel-cache" \
+            build --configurationPath=build-system/appstore-configuration.json \
+            --codesigningInformationPath=build-system/fake-codesigning \
+            --configuration=debug_sim_arm64 --buildNumber="${{ github.run_number }}" \
+            --continueOnError 2>&1 | tee "$RUNNER_TEMP/noveo-build.log"
+      - uses: actions/cache/save@v4
+        if: always() && !cancelled() && steps.bazel-cache.outputs.cache-hit != 'true'
+        with:
+          path: ~/noveo-bazel-cache
+          key: ${{ steps.bazel-cache.outputs.cache-primary-key }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: noveo-simulator-build-log
+          path: ${{ runner.temp }}/noveo-build.log
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: noveo-port-simulator-development
+          path: bazel-bin/Telegram/Telegram.ipa
+          if-no-files-found: error

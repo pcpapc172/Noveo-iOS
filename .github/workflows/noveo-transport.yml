@@ -13,7 +13,10 @@ permissions:
   contents: read
 jobs:
   protocol:
-    runs-on: macos-15
+    strategy:
+      matrix:
+        runner: [macos-15, xcode-27]
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
